@@ -1,8 +1,21 @@
+import os
+# SQLite URI compatible
+WIN = sys.platform.startswith('win')
+if WIN:
+    prefix = 'sqlite:///'
+else:
+    prefix = 'sqlite:////'
+
 from flask import Flask, url_for, render_template
 from markupsafe import escape
+from flask_sqlalchemy import SQLAlchemy  # 导入扩展类
 
 app = Flask(__name__)
 print('__name__: ' + __name__)
+app.config['SQLALCHEMY_DATABASE_URI'] = prefix + os.path.join(app.root_path, 'data.db')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+db = SQLAlchemy(app)  # 初始化扩展，传入程序实例 app
 
 name = 'Grey Li'
 movies = [
