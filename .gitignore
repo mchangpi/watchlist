@@ -4,3 +4,4 @@ __pycache__
 .DS_Store
 # .env for storing secrets
 .env
+*.db
