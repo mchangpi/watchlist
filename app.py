@@ -1,7 +1,9 @@
 import os
 import sys
-import click
 
+import click
+from flask import Flask, render_template, request, url_for, redirect, flash
+from flask_sqlalchemy import SQLAlchemy
 
 # SQLite URI compatible
 WIN = sys.platform.startswith('win')
@@ -10,12 +12,9 @@ if WIN:
 else:
     prefix = 'sqlite:////'
 
-from flask import Flask, url_for, render_template
-from markupsafe import escape
-from flask_sqlalchemy import SQLAlchemy  # 导入扩展类
-
 app = Flask(__name__)
 print('__name__: ' + __name__)
+app.config['SECRET_KEY'] = 'dev'
 app.config['SQLALCHEMY_DATABASE_URI'] = prefix + os.path.join(app.root_path, 'data.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
@@ -35,7 +34,6 @@ def forge():
     """Generate fake data."""
     db.create_all()
 
-    # 全局的两个变量移动到这个函数内
     name = 'Grey Li'
     movies = [
         {'title': 'My Neighbor Totoro', 'year': '1988'},
@@ -73,21 +71,55 @@ def inject_user():  # 函数名可以随意修改
     user = User.query.first()
     return dict(user=user)  # 需要返回字典，等同于 return {'user': user}
 
-@app.errorhandler(404)  # 传入要处理的错误代码
-def page_not_found(e):  # 接受异常对象作为参数
-    user = User.query.first()
-    return render_template('404.html'), 404  # 返回模板和状态码
+@app.errorhandler(404)
+def page_not_found(e):
+    return render_template('404.html'), 404
 
-@app.route('/')
-@app.route('/index')
+@app.route('/', methods=['GET', 'POST'])
+@app.route('/index', methods=['GET', 'POST'])
 def index():
-    user = User.query.first()  # 读取用户记录
+    if request.method == 'POST':  # 判断是否是 POST 请求
+        title = request.form.get('title')  # 传入表单对应输入字段的 name 值
+        year = request.form.get('year')
+        if not title or not year or len(year) > 4 or len(title) > 60:
+            flash('Invalid input.')  # 显示错误提示
+            return redirect(url_for('index'))  # 重定向回主页
+        movie = Movie(title=title, year=year)  # 创建记录
+        db.session.add(movie)  # 添加到数据库会话
+        db.session.commit()  # 提交数据库会话
+        flash('Item created.')  # 显示成功创建的提示
+        return redirect(url_for('index'))  # 重定向回主页
+
     movies = Movie.query.all()  # 读取所有电影记录
     return render_template('index.html', movies=movies)
 
-@app.route('/user/<name>')
-def user_page(name):
-    return f'Hello, User: {escape(name)}'
+@app.route('/movie/edit/<int:movie_id>', methods=['GET', 'POST'])
+def edit(movie_id):
+    movie = Movie.query.get_or_404(movie_id)
+
+    if request.method == 'POST':
+        title = request.form['title']
+        year = request.form['year']
+
+        if not title or not year or len(year) != 4 or len(title) > 60:
+            flash('Invalid input.')
+            return redirect(url_for('edit', movie_id=movie_id))  # POST, 重定向回对应的编辑页面
+
+        movie.title = title
+        movie.year = year
+        db.session.commit()
+        flash('Item updated.')
+        return redirect(url_for('index'))
+
+    return render_template('edit.html', movie=movie)  # GET, 传入被编辑的电影记录
+
+@app.route('/movie/delete/<int:movie_id>', methods=['POST'])
+def delete(movie_id):
+    movie = Movie.query.get_or_404(movie_id)
+    db.session.delete(movie)
+    db.session.commit()
+    flash('Item deleted.')
+    return redirect(url_for('index'))
 
 @app.route('/test')
 def test_url_for():
