@@ -27,7 +27,6 @@
           onclick="return confirm('Are you sure?')"
         />
       </form>
-      {% endif %}
       <a
         class="imdb"
         href="https://www.imdb.com/find?q={{ movie.title }}"

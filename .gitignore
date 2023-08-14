@@ -5,3 +5,4 @@ __pycache__
 # .env for storing secrets
 .env
 *.db
+*.bak
