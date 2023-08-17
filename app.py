@@ -23,6 +23,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)  # 初始化扩展，传入程序实例 app
 login_manager = LoginManager(app)
 
+# 如用户已登录，current_user变量的值会是当前用户的用户模型类记录
 @login_manager.user_loader
 def load_user(user_id):
     user = User.query.get(int(user_id))
@@ -109,6 +110,7 @@ class Movie(db.Model):  # 表名将会是 movie
     title = db.Column(db.String(60))  # 电影标题
     year = db.Column(db.String(4))  # 电影年份
 
+# 返回的变量将会统一注入到每一个模板的上下文环境中，因此可以直接在模板中使用
 @app.context_processor
 def inject_user():  # 函数名可以随意修改
     user = User.query.first()
